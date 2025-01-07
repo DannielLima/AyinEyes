@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 export default function ThreeScene() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -11,53 +13,82 @@ export default function ThreeScene() {
     if (!container) return;
 
     const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111111);
+
     const camera = new THREE.PerspectiveCamera(
       75,
-      window.innerWidth / window.innerHeight,
+      container.clientWidth / container.clientHeight,
       0.1,
       1000
     );
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.position.set(0, 1, 5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
     container.appendChild(renderer.domElement);
 
-    const eyeGeometry = new THREE.SphereGeometry(1, 32, 32);
-    const eyeMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
-    const eye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-    scene.add(eye);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
 
-    const irisGeometry = new THREE.CircleGeometry(0.4, 32);
-    const irisMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
-    const iris = new THREE.Mesh(irisGeometry, irisMaterial);
-    iris.position.z = 0.9;
-    eye.add(iris);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(ambientLight);
 
-    const light = new THREE.PointLight(0xffffff, 1, 100);
-    light.position.set(10, 10, 10);
-    scene.add(light);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    directionalLight.position.set(5, 10, 7);
+    scene.add(directionalLight);
+
+    let eyeModel: THREE.Object3D | null = null;
+
+    const loader = new GLTFLoader();
+    loader.load(
+      "/tigers_eye/scene.gltf",
+      (gltf: { scene: THREE.Object3D }) => {
+        eyeModel = gltf.scene;
+        
+        eyeModel.rotation.y = Math.PI;
+
+        scene.add(eyeModel);
+      },
+      undefined,
+      (error: ErrorEvent) => {
+        console.error("Erro ao carregar o modelo:", error.message);
+      }
+    );
 
     const onMouseMove = (event: MouseEvent) => {
+      if (!eyeModel) return;
+
       const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
       const mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
 
-      iris.position.x = mouseX * 0.5;
-      iris.position.y = mouseY * 0.5;
+      const maxRotation = Math.PI / 6;
+      eyeModel.rotation.y = THREE.MathUtils.clamp(mouseX * maxRotation, -maxRotation, maxRotation);
+      eyeModel.rotation.x = THREE.MathUtils.clamp(-mouseY * maxRotation, -maxRotation, maxRotation);
     };
+
     window.addEventListener("mousemove", onMouseMove);
 
-    camera.position.z = 5;
-
     const animate = () => {
-      requestAnimationFrame(animate);
+      controls.update();
       renderer.render(scene, camera);
+      requestAnimationFrame(animate);
     };
     animate();
 
+    const onResize = () => {
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    };
+    window.addEventListener("resize", onResize);
+
     return () => {
+      window.removeEventListener("resize", onResize);
       window.removeEventListener("mousemove", onMouseMove);
       container.removeChild(renderer.domElement);
     };
   }, []);
 
-  return <div ref={containerRef} className="w-full h-full" />;
+  return <div ref={containerRef} className="w-full h-screen" />;
 }
