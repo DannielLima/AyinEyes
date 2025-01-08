@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import throttle from "lodash/throttle";
 
 export default function ThreeScene() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -31,25 +32,19 @@ export default function ThreeScene() {
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-    scene.add(ambientLight);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
     directionalLight.position.set(5, 10, 7);
     scene.add(directionalLight);
 
     let eyeModel: THREE.Object3D | null = null;
-
     const loader = new GLTFLoader();
     loader.load(
       "/scene.gltf",
       (gltf) => {
         eyeModel = gltf.scene;
-
         eyeModel.scale.set(0.5, 0.5, 0.5);
-
-        eyeModel.rotation.set(0, 0, 0);
-
         scene.add(eyeModel);
       },
       undefined,
@@ -58,7 +53,7 @@ export default function ThreeScene() {
       }
     );
 
-    const onMouseMove = (event: MouseEvent) => {
+    const onMouseMove = throttle((event: MouseEvent) => {
       if (!eyeModel) return;
 
       const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
@@ -75,14 +70,15 @@ export default function ThreeScene() {
         -maxRotation,
         maxRotation
       );
-    };
+    }, 50);
 
     window.addEventListener("mousemove", onMouseMove);
 
+    let animationFrameId: number;
     const animate = () => {
       controls.update();
       renderer.render(scene, camera);
-      requestAnimationFrame(animate);
+      animationFrameId = requestAnimationFrame(animate);
     };
     animate();
 
@@ -94,9 +90,11 @@ export default function ThreeScene() {
     window.addEventListener("resize", onResize);
 
     return () => {
+      cancelAnimationFrame(animationFrameId);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("mousemove", onMouseMove);
       container.removeChild(renderer.domElement);
+      renderer.dispose();
     };
   }, []);
 
