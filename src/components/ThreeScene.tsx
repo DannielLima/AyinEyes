@@ -21,7 +21,7 @@ export default function ThreeScene() {
       0.1,
       1000
     );
-    camera.position.set(0, 1, 5);
+    camera.position.set(0, 1, 400);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(container.clientWidth, container.clientHeight);
@@ -42,17 +42,19 @@ export default function ThreeScene() {
 
     const loader = new GLTFLoader();
     loader.load(
-      "/tigers_eye/scene.gltf",
-      (gltf: { scene: THREE.Object3D }) => {
+      "/scene.gltf",
+      (gltf) => {
         eyeModel = gltf.scene;
-        
-        eyeModel.rotation.y = Math.PI;
+
+        eyeModel.scale.set(0.5, 0.5, 0.5);
+
+        eyeModel.rotation.set(0, 0, 0);
 
         scene.add(eyeModel);
       },
       undefined,
-      (error: ErrorEvent) => {
-        console.error("Erro ao carregar o modelo:", error.message);
+      (error) => {
+        console.error("Error loading model:", error.message);
       }
     );
 
@@ -63,8 +65,16 @@ export default function ThreeScene() {
       const mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
 
       const maxRotation = Math.PI / 6;
-      eyeModel.rotation.y = THREE.MathUtils.clamp(mouseX * maxRotation, -maxRotation, maxRotation);
-      eyeModel.rotation.x = THREE.MathUtils.clamp(-mouseY * maxRotation, -maxRotation, maxRotation);
+      eyeModel.rotation.y = THREE.MathUtils.clamp(
+        mouseX * maxRotation,
+        -maxRotation,
+        maxRotation
+      );
+      eyeModel.rotation.x = THREE.MathUtils.clamp(
+        -mouseY * maxRotation,
+        -maxRotation,
+        maxRotation
+      );
     };
 
     window.addEventListener("mousemove", onMouseMove);
