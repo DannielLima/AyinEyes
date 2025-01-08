@@ -10,7 +10,7 @@ export default function Home() {
           Eyes
         </h1>
         <p className="mt-4 text-lg sm:text-xl md:text-2xl font-medium text-gray-300 tracking-wide">
-          The Eye of Eternity
+          The Eye of Eternityy
         </p>
       </div>
 
